@@ -1,0 +1,21 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-stone-950 text-stone-100 font-sans antialiased;
+  }
+  ::selection {
+    @apply bg-emerald-500/30;
+  }
+  ::-webkit-scrollbar {
+    @apply w-2;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-stone-950;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-stone-700 rounded-full;
+  }
+}

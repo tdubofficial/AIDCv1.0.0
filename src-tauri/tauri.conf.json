@@ -1,0 +1,74 @@
+{
+  "build": {
+    "beforeBuildCommand": "npm run build",
+    "beforeDevCommand": "npm run dev",
+    "devPath": "http://localhost:4000",
+    "distDir": "../build/client"
+  },
+  "package": {
+    "productName": "AI Director's Chair",
+    "version": "1.0.0"
+  },
+  "tauri": {
+    "allowlist": {
+      "all": false,
+      "shell": {
+        "open": true
+      },
+      "dialog": {
+        "all": true
+      },
+      "fs": {
+        "all": true,
+        "scope": ["$APPDATA/**", "$DOCUMENT/**", "$DOWNLOAD/**", "$HOME/**"]
+      },
+      "path": {
+        "all": true
+      },
+      "window": {
+        "all": true
+      }
+    },
+    "bundle": {
+      "active": true,
+      "targets": "all",
+      "identifier": "com.aidirectors.chair",
+      "icon": [
+        "icons/32x32.png",
+        "icons/128x128.png",
+        "icons/128x128@2x.png",
+        "icons/icon.icns",
+        "icons/icon.ico"
+      ],
+      "resources": [],
+      "category": "Video",
+      "shortDescription": "AI-powered video production suite",
+      "longDescription": "Create professional AI-generated films with multi-provider video generation, Gemini-powered storyboards, and comprehensive cinema production tools.",
+      "copyright": "Copyright © 2026",
+      "windows": {
+        "wix": {
+          "language": "en-US"
+        }
+      },
+      "macOS": {
+        "minimumSystemVersion": "10.15"
+      }
+    },
+    "security": {
+      "csp": "default-src 'self'; script-src 'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' https://generativelanguage.googleapis.com https://queue.fal.run https://fal.run https://*.fal.ai"
+    },
+    "windows": [
+      {
+        "title": "AI Director's Chair",
+        "width": 1440,
+        "height": 900,
+        "minWidth": 1024,
+        "minHeight": 700,
+        "resizable": true,
+        "fullscreen": false,
+        "decorations": true,
+        "center": true
+      }
+    ]
+  }
+}
