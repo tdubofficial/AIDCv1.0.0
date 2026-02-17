@@ -1,5 +1,5 @@
 {
-  "productName": "AI Director's Chair",
+  "productName": "AI Directors Chair",
   "version": "1.0.0",
   "identifier": "com.aidirectors.chair",
   "build": {
@@ -11,7 +11,7 @@
   "app": {
     "windows": [
       {
-        "title": "AI Director's Chair",
+        "title": "AI Directors Chair",
         "width": 1440,
         "height": 900,
         "minWidth": 1024,

@@ -70,7 +70,7 @@ jobs:
             *All data is stored locally. API keys for Gemini and Fal.ai are required.*
           releaseDraft: true
           prerelease: ${{ github.event_name == 'workflow_dispatch' }}
-          args: --target x86_64-pc-windows-msvc --bundles nsis,msi
+          args: --target x86_64-pc-windows-msvc --bundles nsis
 
   build-macos:
     if: >-
@@ -132,6 +132,8 @@ jobs:
       inputs.platform == 'all' ||
       inputs.platform == 'linux'
     runs-on: ubuntu-22.04
+    env:
+      WEBKIT_DISABLE_COMPOSITING_MODE: 1
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -157,7 +159,9 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y \
             libgtk-3-dev \
-            libwebkit2gtk-4.0-dev \
+            libwebkit2gtk-4.1-dev \
+            libjavascriptcoregtk-4.1-dev \
+            libsoup-3.0-dev \
             libappindicator3-dev \
             librsvg2-dev \
             patchelf \
