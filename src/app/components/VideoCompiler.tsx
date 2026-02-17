@@ -2,7 +2,7 @@ import { useState, useRef } from "react";
 import { Play, Pause, Download, Film, Settings } from "lucide-react";
 import { useAppStore } from "~/app/lib/store";
 
-export function VideoCompiler() {
+export function VideoCompiler({ guided }: { guided?: boolean }) {
   const { scenes, finalVideoUrl, setFinalVideoUrl } = useAppStore();
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentScene, setCurrentScene] = useState(0);
@@ -41,8 +41,11 @@ export function VideoCompiler() {
   return (
     <div className="max-w-4xl mx-auto space-y-8 animate-fade-in">
       <div className="text-center space-y-2">
-        <h2 className="text-3xl font-serif font-bold text-white">Final Cut</h2>
-        <p className="text-stone-400">Compile and export your film</p>
+        <h2 className="text-3xl font-serif font-bold text-white">Compile & Export</h2>
+        <p className="text-stone-400">Preview, trim, and export your finished film.</p>
+        {guided && (!scenes || scenes.filter(s => s.status === "completed").length === 0) && (
+          <div className="mt-2 text-emerald-400 text-xs font-semibold">Render all scenes before compiling your final cut.</div>
+        )}
       </div>
 
       <div className="bg-stone-900 border border-stone-800 rounded-xl p-8">

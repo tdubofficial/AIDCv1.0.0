@@ -1,16 +1,24 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Camera, Mic, Video, Check, AlertCircle, Loader2, Film, Settings2 } from "lucide-react";
 import { useAppStore } from "~/app/lib/store";
 import { generateVideo, checkJobStatus, estimateCost } from "~/app/lib/video/providers";
+// Simple render time estimate (seconds) per provider
+const RENDER_SPEEDS: Record<string, number> = { kling: 1.0, minimax: 0.7, wan: 1.2 };
+function estimateRenderTime(provider: string, duration: number) {
+  const speed = RENDER_SPEEDS[provider] || 1.0;
+  return Math.round(duration * speed);
+}
 import type { StoryboardScene, VideoGenerationParams } from "~/app/types";
 
-export function ProductionBoard() {
+export function ProductionBoard({ guided }: { guided?: boolean }) {
   const { scenes, updateScene, characters, visualPreset, setVisualPreset, selectedProvider, setSelectedProvider } = useAppStore();
   const [generatingIds, setGeneratingIds] = useState<Set<string>>(new Set());
 
   const handleGenerateClip = useCallback(async (scene: StoryboardScene) => {
     setGeneratingIds((prev) => new Set(prev).add(scene.id));
-    updateScene(scene.id, { status: "generating" });
+    // Store job start time for ETA
+    const startTime = Date.now();
+    updateScene(scene.id, { status: "generating", jobStart: startTime });
 
     try {
       const charPhotos = characters
@@ -61,17 +69,23 @@ export function ProductionBoard() {
     }
   }, [characters, selectedProvider, updateScene, visualPreset]);
 
-  const totalCost = scenes.reduce((acc, s) => acc + estimateCost(selectedProvider === "auto" ? "kling" : selectedProvider, s.duration), 0);
+  const provider = selectedProvider === "auto" ? "kling" : selectedProvider;
+  const totalCost = scenes.reduce((acc, s) => acc + estimateCost(provider, s.duration), 0);
+  const totalRenderTime = scenes.reduce((acc, s) => acc + estimateRenderTime(provider, s.duration), 0);
 
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-serif font-bold text-white mb-1">Production Board</h2>
-          <p className="text-stone-400 text-sm">{scenes.length} scenes ready for filming</p>
+          <h2 className="text-3xl font-serif font-bold text-white mb-1">Render Scenes</h2>
+          <p className="text-stone-400 text-sm">Generate cinematic video clips for each storyboarded scene.</p>
+          {guided && scenes.length === 0 && (
+            <div className="mt-2 text-emerald-400 text-xs font-semibold">No scenes to render. Complete your storyboard first.</div>
+          )}
         </div>
         <div className="flex items-center gap-3">
           <span className="text-xs text-stone-500">Est. cost: ${totalCost.toFixed(2)}</span>
+          <span className="text-xs text-stone-500">Est. render: {totalRenderTime}s</span>
           <select
             value={selectedProvider}
             onChange={(e) => setSelectedProvider(e.target.value as any)}
@@ -158,6 +172,26 @@ export function ProductionBoard() {
 }
 
 function SceneCard({ scene, isGenerating, onGenerate }: { scene: StoryboardScene; isGenerating: boolean; onGenerate: () => void }) {
+  const provider = scene.provider || "kling";
+  const renderEstimate = estimateRenderTime(provider, scene.duration);
+  // mm:ss formatting
+  function formatTime(sec: number) {
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return `${m}:${s.toString().padStart(2, "0")}`;
+  }
+  // Live ETA for rendering jobs
+  const [liveEta, setLiveEta] = useState<number | null>(null);
+  useEffect(() => {
+    if (scene.status === "generating" && scene.jobStart) {
+      const interval = setInterval(() => {
+        setLiveEta(Math.floor((Date.now() - scene.jobStart) / 1000));
+      }, 1000);
+      return () => clearInterval(interval);
+    } else {
+      setLiveEta(null);
+    }
+  }, [scene.status, scene.jobStart]);
   return (
     <div className="bg-stone-900 border border-stone-800 rounded-xl p-5 flex gap-5 hover:border-stone-700 transition-all">
       <div className="w-14 h-14 rounded-lg bg-stone-950 flex items-center justify-center border border-stone-800 flex-shrink-0">
@@ -197,14 +231,21 @@ function SceneCard({ scene, isGenerating, onGenerate }: { scene: StoryboardScene
           {scene.videoUrl ? (
             <video src={scene.videoUrl} className="w-32 h-20 rounded bg-black object-cover" controls />
           ) : (
-            <button
-              onClick={onGenerate}
-              disabled={isGenerating}
-              className="flex items-center gap-2 bg-stone-800 hover:bg-stone-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
-            >
-              {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Video className="w-4 h-4" />}
-              {isGenerating ? "Rendering..." : "Generate Clip"}
-            </button>
+            <div className="flex flex-col items-end gap-1">
+              <button
+                onClick={onGenerate}
+                disabled={isGenerating}
+                className="flex items-center gap-2 bg-stone-800 hover:bg-stone-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+              >
+                {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Video className="w-4 h-4" />}
+                {isGenerating ? "Rendering..." : "Generate Clip"}
+              </button>
+              <span className="text-xs text-stone-500">
+                {isGenerating && liveEta !== null
+                  ? `Elapsed: ${formatTime(liveEta)}`
+                  : `Est. ${formatTime(renderEstimate)}`}
+              </span>
+            </div>
           )}
         </div>
       </div>

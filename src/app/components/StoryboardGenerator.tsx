@@ -2,10 +2,10 @@ import { useState } from "react";
 import { Loader2, Wand2 } from "lucide-react";
 import { useAppStore } from "~/app/lib/store";
 import { generateStoryboard } from "~/app/lib/gemini";
-import { GENRE_TAGS } from "~/app/lib/anthologies";
+import { GENRE_TAGS, CINEMATIC_PRESETS } from "~/app/lib/anthologies";
 
-export function StoryboardGenerator() {
-  const { theme, setTheme, characters, setScenes, setActiveTab } = useAppStore();
+export function StoryboardGenerator({ guided }: { guided?: boolean }) {
+  const { theme, setTheme, characters, setScenes, setActiveTab, apiKeys } = useAppStore();
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -15,6 +15,36 @@ export function StoryboardGenerator() {
     setError(null);
 
     try {
+      // If Gemini API key is not configured, generate a lightweight local draft storyboard
+      if (!apiKeys?.gemini) {
+        const count = Math.max(3, Math.min(8, characters.length + 2));
+        const scenes = Array.from({ length: count }).map((_, idx) => {
+          const c = characters.length ? characters[idx % characters.length] : null;
+          const camera = (['medium','wide','closeup','dolly','static','aerial'] as const)[idx % 6];
+          const cameraHint = (CINEMATIC_PRESETS.camera as any)[camera] || "medium shot";
+          return {
+            id: `draft-${Date.now()}-${idx}`,
+            sceneNumber: idx + 1,
+            title: c ? `${c.name} Moment` : `Scene ${idx + 1}`,
+            description: c
+              ? `Draft: ${c.name} in a ${theme.tone} ${theme.genre} moment.`
+              : `Draft scene ${idx + 1} for ${theme.title || 'Untitled'}`,
+            cameraAngle: camera,
+            characters: c ? [c.name] : [],
+            dialog: "",
+            lighting: "natural",
+            duration: 5,
+            status: "pending" as const,
+            prompt: `${theme.tone} ${theme.genre}. ${cameraHint}. ${c ? c.description : ''}`,
+            order: idx,
+          };
+        });
+
+        setScenes(scenes);
+        setActiveTab("production");
+        return;
+      }
+
       const scenes = await generateStoryboard(theme, characters);
       setScenes(scenes);
       setActiveTab("production");
@@ -28,8 +58,11 @@ export function StoryboardGenerator() {
   return (
     <div className="max-w-3xl mx-auto space-y-8 animate-fade-in">
       <div className="text-center space-y-2">
-        <h2 className="text-3xl font-serif font-bold text-white">Pre-Production</h2>
-        <p className="text-stone-400">Define your film&apos;s creative direction</p>
+        <h2 className="text-3xl font-serif font-bold text-white">Storyboard & Direction</h2>
+        <p className="text-stone-400">Shape your film's creative vision. Set the title, genre, and generate a visual storyboard.</p>
+        {guided && (!theme.synopsis || characters.length === 0) && (
+          <div className="mt-2 text-emerald-400 text-xs font-semibold">Add a synopsis and at least one character to enable storyboard generation.</div>
+        )}
       </div>
 
       <div className="bg-stone-900 border border-stone-800 rounded-xl p-8 space-y-6">

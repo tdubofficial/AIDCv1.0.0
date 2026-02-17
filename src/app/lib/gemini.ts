@@ -72,12 +72,15 @@ Make it cinematic and production-ready. Return ONLY the JSON array, no other tex
   let parsed: any[];
 
   try {
-    parsed = JSON.parse(cleaned);
-    if (!Array.isArray(parsed)) {
+    const parsedData: any = JSON.parse(cleaned);
+    if (Array.isArray(parsedData)) {
+      parsed = parsedData;
+    } else {
       // Sometimes Gemini wraps in an object
-      parsed = parsed.scenes || parsed.storyboard || Object.values(parsed)[0];
+      parsed = parsedData.scenes || parsedData.storyboard || Object.values(parsedData)[0];
     }
-  } catch {
+    if (!Array.isArray(parsed)) throw new Error("Parsed storyboard is not an array");
+  } catch (e) {
     throw new Error("Failed to parse Gemini response as JSON");
   }
 

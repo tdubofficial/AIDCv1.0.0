@@ -47,8 +47,8 @@ interface AppState {
   updateVideoJob: (id: string, updates: Partial<VideoJob>) => void;
 
   // UI
-  activeTab: "cast" | "theme" | "production" | "compile";
-  setActiveTab: (tab: "cast" | "theme" | "production" | "compile") => void;
+  activeTab: "cast" | "theme" | "production" | "compile" | "council" | "anthologies" | "equipment";
+  setActiveTab: (tab: "cast" | "theme" | "production" | "compile" | "council" | "anthologies" | "equipment") => void;
   selectedProvider: "kling" | "minimax" | "wan" | "auto";
   setSelectedProvider: (p: "kling" | "minimax" | "wan" | "auto") => void;
 
@@ -143,7 +143,7 @@ export const useAppStore = create<AppState>()(
       // UI
       activeTab: "cast",
       setActiveTab: (tab) => set({ activeTab: tab }),
-      selectedProvider: "kling",
+      selectedProvider: "wan",
       setSelectedProvider: (p) => set({ selectedProvider: p }),
 
       // Final
@@ -152,12 +152,20 @@ export const useAppStore = create<AppState>()(
     }),
     {
       name: "ai-director-storage",
+      // Avoid persisting large binary data (data URLs). Persist only audio metadata.
       partialize: (state) => ({
         apiKeys: state.apiKeys,
         characters: state.characters,
         theme: state.theme,
         visualPreset: state.visualPreset,
         scenes: state.scenes,
+        audioTrack: state.audioTrack
+          ? {
+              id: state.audioTrack.id,
+              filename: state.audioTrack.filename,
+              duration: state.audioTrack.duration,
+            }
+          : null,
         musicSettings: state.musicSettings,
         selectedProvider: state.selectedProvider,
       }),

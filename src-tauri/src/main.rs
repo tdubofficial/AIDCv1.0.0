@@ -109,8 +109,9 @@ fn main() {
         .setup(|app| {
             #[cfg(debug_assertions)]
             {
-                let window = app.get_window("main").unwrap();
-                window.open_devtools();
+                if let Some(window) = app.get_webview_window("main") {
+                    let _ = window.open_devtools();
+                }
             }
             Ok(())
         })

@@ -6,18 +6,24 @@ import { StoryboardGenerator } from "~/app/components/StoryboardGenerator";
 import { ProductionBoard } from "~/app/components/ProductionBoard";
 import { VideoCompiler } from "~/app/components/VideoCompiler";
 import { MusicVideoMode } from "~/app/components/MusicVideoMode";
+import { CouncilManager } from "~/app/components/CouncilManager";
+import { AnthologyBrowser } from "~/app/components/AnthologyBrowser";
+import { CameraEquipmentDB } from "~/app/components/CameraEquipmentDB";
 
 const TABS = [
-  { id: "cast", label: "Cast", icon: Users, description: "Characters" },
-  { id: "theme", label: "Pre-Production", icon: Wand2, description: "Storyboard" },
-  { id: "production", label: "Production", icon: Film, description: "Generate" },
-  { id: "compile", label: "Final Cut", icon: Scissors, description: "Export" },
+  { id: "cast", label: "Ready to Cast", icon: Users, description: "Define your characters" },
+  { id: "theme", label: "Storyboard & Direction", icon: Wand2, description: "Shape your vision" },
+  { id: "production", label: "Render Scenes", icon: Film, description: "Generate cinematic clips" },
+  { id: "council", label: "Council", icon: Clapperboard, description: "Knowledge experts" },
+  { id: "anthologies", label: "Anthologies", icon: Key, description: "Knowledge library" },
+  { id: "equipment", label: "Equipment DB", icon: Film, description: "Camera & gear" },
+  { id: "compile", label: "Compile & Export", icon: Scissors, description: "Preview and export" },
 ] as const;
 
 type TabId = (typeof TABS)[number]["id"];
 
 export default function App() {
-  const { activeTab, setActiveTab, apiKeys, setApiKeys } = useAppStore();
+  const { activeTab, setActiveTab, apiKeys, setApiKey } = useAppStore();
   const [showSettings, setShowSettings] = useState(false);
 
   const currentTabIndex = TABS.findIndex((t) => t.id === activeTab);
@@ -106,7 +112,7 @@ export default function App() {
                   type="password"
                   value={apiKeys.gemini}
                   onChange={(e) =>
-                    setApiKeys({ ...apiKeys, gemini: e.target.value })
+                    setApiKey("gemini", e.target.value)
                   }
                   placeholder="AIza..."
                   className="w-full bg-stone-950 border border-stone-800 rounded-lg px-4 py-2.5 text-sm text-white placeholder-stone-700 focus:outline-none focus:border-emerald-500/50"
@@ -123,7 +129,7 @@ export default function App() {
                   type="password"
                   value={apiKeys.fal}
                   onChange={(e) =>
-                    setApiKeys({ ...apiKeys, fal: e.target.value })
+                    setApiKey("fal", e.target.value)
                   }
                   placeholder="fal_..."
                   className="w-full bg-stone-950 border border-stone-800 rounded-lg px-4 py-2.5 text-sm text-white placeholder-stone-700 focus:outline-none focus:border-emerald-500/50"
@@ -137,17 +143,32 @@ export default function App() {
         </div>
       )}
 
+      {/* Stepper/Progress Bar */}
+      <div className="w-full bg-stone-900 border-b border-stone-800">
+        <div className="max-w-7xl mx-auto px-6 py-2 flex items-center gap-2">
+          {TABS.map((tab, idx) => (
+            <div key={tab.id} className="flex items-center gap-1">
+              <div className={`w-2.5 h-2.5 rounded-full ${activeTab === tab.id ? "bg-emerald-400" : idx < currentTabIndex ? "bg-emerald-700" : "bg-stone-700"}`}></div>
+              {idx < TABS.length - 1 && <div className="w-8 h-0.5 bg-stone-800" />}
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* Main Content */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-6 py-8">
-        {activeTab === "cast" && <CastManager />}
-        {activeTab === "theme" && <StoryboardGenerator />}
+        {activeTab === "cast" && <CastManager guided />}
+        {activeTab === "theme" && <StoryboardGenerator guided />}
         {activeTab === "production" && (
           <div className="space-y-6">
             <MusicVideoMode />
-            <ProductionBoard />
+            <ProductionBoard guided />
           </div>
         )}
-        {activeTab === "compile" && <VideoCompiler />}
+        {activeTab === "council" && <CouncilManager />}
+        {activeTab === "anthologies" && <AnthologyBrowser />}
+        {activeTab === "equipment" && <CameraEquipmentDB />}
+        {activeTab === "compile" && <VideoCompiler guided />}
       </main>
 
       {/* Footer */}

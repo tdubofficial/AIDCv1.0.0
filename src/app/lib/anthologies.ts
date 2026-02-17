@@ -1,4 +1,9 @@
 // ============================================================
+// IMPORTS
+// ============================================================
+import { Anthology } from '../../types';
+
+// ============================================================
 // CAMERA ANTHOLOGY
 // ============================================================
 export const CAMERAS = {
@@ -188,3 +193,57 @@ export const GENRE_TAGS = [
   { id: "adventure", label: "Adventure" },
   { id: "experimental", label: "Experimental" },
 ] as const;
+
+// ============================================================
+// UNIFIED ANTHOLOGY EXPORT FOR BROWSING
+// ============================================================
+export const anthologies: Anthology[] = [
+  // Cameras
+  ...Object.entries(CAMERAS).flatMap(([category, items]) =>
+    items.map((item) => ({
+      id: item.id,
+      title: item.name,
+      category: `Camera - ${category}`,
+      content: 'look' in item ? item.look : '',
+      tags: 'promptHints' in item ? [item.promptHints] : [],
+    }))
+  ),
+  // Lenses
+  ...Object.entries(LENSES).flatMap(([category, items]) =>
+    items.map((item) => ({
+      id: item.id,
+      title: item.name,
+      category: `Lens - ${category}`,
+      content: item.character,
+      tags: [item.promptHints],
+    }))
+  ),
+  // Lighting
+  ...Object.entries(LIGHTING).flatMap(([category, items]) =>
+    items.map((item) => ({
+      id: item.id,
+      title: item.name,
+      category: `Lighting - ${category}`,
+      content: 'desc' in item ? item.desc : item.name,
+      tags: [],
+    }))
+  ),
+  // Directors
+  ...Object.entries(DIRECTORS).flatMap(([category, items]) =>
+    items.map((item) => ({
+      id: item.id,
+      title: item.name,
+      category: `Director - ${category}`,
+      content: item.style,
+      tags: [item.promptHints],
+    }))
+  ),
+  // Color Grading
+  ...GRADING.map((item) => ({
+    id: item.id,
+    title: item.name,
+    category: 'Color Grading',
+    content: item.desc,
+    tags: [item.promptHints],
+  })),
+];

@@ -3,7 +3,7 @@ import { Plus, Trash2, Camera, Users } from "lucide-react";
 import { useAppStore } from "~/app/lib/store";
 import type { Character } from "~/app/types";
 
-export function CastManager() {
+export function CastManager({ guided }: { guided?: boolean }) {
   const { characters, addCharacter, updateCharacter, removeCharacter } = useAppStore();
 
   const handleAdd = () => {
@@ -28,12 +28,15 @@ export function CastManager() {
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-serif font-bold text-white mb-1">Cast Management</h2>
-          <p className="text-stone-400 text-sm">Define your characters. Upload reference photos for AI consistency.</p>
+          <h2 className="text-3xl font-serif font-bold text-white mb-1">Ready to Cast</h2>
+          <p className="text-stone-400 text-sm">Define your characters and upload reference photos for visual consistency.</p>
+          {guided && characters.length === 0 && (
+            <div className="mt-2 text-emerald-400 text-xs font-semibold">Add your first character to begin your production journey.</div>
+          )}
         </div>
         <button
           onClick={handleAdd}
-          className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2.5 rounded-lg font-medium transition-colors"
+          className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2.5 rounded-lg font-medium transition-colors animate-bounce"
         >
           <Plus className="w-4 h-4" />
           Add Character
