@@ -4,31 +4,86 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: 'Target platform (default: all)'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - windows
+          - macos
+          - linux
 
 permissions:
   contents: write
 
 jobs:
-  build:
+  build-windows:
+    if: >-
+      github.event_name == 'push' ||
+      inputs.platform == 'all' ||
+      inputs.platform == 'windows'
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Build Tauri app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.event_name == 'push' && github.ref_name || format('v{0}-dev', github.run_number) }}
+          releaseName: "AI Director's Chair ${{ github.event_name == 'push' && github.ref_name || format('v{0}-dev', github.run_number) }}"
+          releaseBody: |
+            ## AI Director's Chair
+
+            ### Downloads
+            - **Windows**: `.exe` installer (NSIS) or `.msi`
+
+            ---
+            *All data is stored locally. API keys for Gemini and Fal.ai are required.*
+          releaseDraft: true
+          prerelease: ${{ github.event_name == 'workflow_dispatch' }}
+          args: --target x86_64-pc-windows-msvc --bundles nsis,msi
+
+  build-macos:
+    if: >-
+      github.event_name == 'push' ||
+      inputs.platform == 'all' ||
+      inputs.platform == 'macos'
     strategy:
       fail-fast: false
       matrix:
         include:
-          - platform: windows-latest
-            target: x86_64-pc-windows-msvc
-            bundle: msi
-          - platform: macos-latest
-            target: aarch64-apple-darwin
-            bundle: dmg
-          - platform: macos-latest
-            target: x86_64-apple-darwin
-            bundle: dmg
-          - platform: ubuntu-22.04
-            target: x86_64-unknown-linux-gnu
-            bundle: appimage,deb
-
-    runs-on: ${{ matrix.platform }}
-
+          - target: aarch64-apple-darwin
+          - target: x86_64-apple-darwin
+    runs-on: macos-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -49,8 +104,55 @@ jobs:
         with:
           workspaces: src-tauri -> target
 
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Build Tauri app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.event_name == 'push' && github.ref_name || format('v{0}-dev', github.run_number) }}
+          releaseName: "AI Director's Chair ${{ github.event_name == 'push' && github.ref_name || format('v{0}-dev', github.run_number) }}"
+          releaseBody: |
+            ## AI Director's Chair
+
+            ### Downloads
+            - **macOS**: `.dmg` (Apple Silicon & Intel)
+          releaseDraft: true
+          prerelease: ${{ github.event_name == 'workflow_dispatch' }}
+          args: --target ${{ matrix.target }} --bundles dmg
+
+  build-linux:
+    if: >-
+      github.event_name == 'push' ||
+      inputs.platform == 'all' ||
+      inputs.platform == 'linux'
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-gnu
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+
       - name: Install Linux dependencies
-        if: matrix.platform == 'ubuntu-22.04'
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -72,21 +174,13 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tagName: ${{ github.ref_name }}
-          releaseName: "AI Director's Chair ${{ github.ref_name }}"
+          tagName: ${{ github.event_name == 'push' && github.ref_name || format('v{0}-dev', github.run_number) }}
+          releaseName: "AI Director's Chair ${{ github.event_name == 'push' && github.ref_name || format('v{0}-dev', github.run_number) }}"
           releaseBody: |
-            ## AI Director's Chair ${{ github.ref_name }}
+            ## AI Director's Chair
 
             ### Downloads
-            - **Windows**: `.msi` installer
-            - **macOS**: `.dmg` (Apple Silicon & Intel)
             - **Linux**: `.AppImage` / `.deb`
-
-            ### What's New
-            See [CHANGELOG](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for details.
-
-            ---
-            *All data is stored locally. API keys for Gemini and Fal.ai are required.*
           releaseDraft: true
-          prerelease: false
-          args: --target ${{ matrix.target }} --bundles ${{ matrix.bundle }}
+          prerelease: ${{ github.event_name == 'workflow_dispatch' }}
+          args: --target x86_64-unknown-linux-gnu --bundles appimage,deb

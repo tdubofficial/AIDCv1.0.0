@@ -1,13 +1,15 @@
-import { useState } from "react";
-import { Loader2, Wand2 } from "lucide-react";
+import { useState, useCallback, useRef } from "react";
+import { Loader2, Wand2, GripVertical, Trash2, Plus } from "lucide-react";
 import { useAppStore } from "~/app/lib/store";
 import { generateStoryboard } from "~/app/lib/gemini";
 import { GENRE_TAGS, CINEMATIC_PRESETS } from "~/app/lib/anthologies";
 
 export function StoryboardGenerator({ guided }: { guided?: boolean }) {
-  const { theme, setTheme, characters, setScenes, setActiveTab, apiKeys } = useAppStore();
+  const { theme, setTheme, characters, scenes, setScenes, reorderScenes, setActiveTab, apiKeys } = useAppStore();
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const dragItem = useRef<number | null>(null);
+  const dragOver = useRef<number | null>(null);
 
   const handleGenerate = async () => {
     if (!theme.synopsis || characters.length === 0) return;
@@ -41,13 +43,13 @@ export function StoryboardGenerator({ guided }: { guided?: boolean }) {
         });
 
         setScenes(scenes);
-        setActiveTab("production");
+        setActiveTab("council");
         return;
       }
 
       const scenes = await generateStoryboard(theme, characters);
       setScenes(scenes);
-      setActiveTab("production");
+      setActiveTab("council");
     } catch (err: any) {
       setError(err.message || "Failed to generate storyboard");
     } finally {
@@ -153,6 +155,89 @@ export function StoryboardGenerator({ guided }: { guided?: boolean }) {
           </p>
         )}
       </div>
+
+      {/* Scene List with Drag & Drop Reorder (Feature #3) + Thumbnails (Feature #11) */}
+      {scenes.length > 0 && (
+        <div className="bg-stone-900 border border-stone-800 rounded-xl p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-serif text-white font-medium">Storyboard Scenes</h3>
+            <span className="text-xs text-stone-500">{scenes.length} scenes · Drag to reorder</span>
+          </div>
+          <div className="space-y-2">
+            {scenes.map((scene, idx) => (
+              <div
+                key={scene.id}
+                draggable
+                onDragStart={() => { dragItem.current = idx; }}
+                onDragEnter={() => { dragOver.current = idx; }}
+                onDragEnd={() => {
+                  if (dragItem.current !== null && dragOver.current !== null && dragItem.current !== dragOver.current) {
+                    const reordered = [...scenes];
+                    const [moved] = reordered.splice(dragItem.current, 1);
+                    reordered.splice(dragOver.current, 0, moved);
+                    reorderScenes(reordered);
+                  }
+                  dragItem.current = null;
+                  dragOver.current = null;
+                }}
+                onDragOver={(e) => e.preventDefault()}
+                className="flex items-center gap-3 bg-stone-950 border border-stone-800 rounded-lg p-3 cursor-grab active:cursor-grabbing hover:border-stone-700 transition-all group"
+              >
+                <GripVertical className="w-4 h-4 text-stone-600 flex-shrink-0 group-hover:text-stone-400" />
+                <div className="w-8 h-8 rounded bg-stone-800 flex items-center justify-center flex-shrink-0">
+                  {scene.thumbnailUrl ? (
+                    <img src={scene.thumbnailUrl} alt="" className="w-8 h-8 rounded object-cover" />
+                  ) : (
+                    <span className="text-xs font-bold text-emerald-500">{scene.sceneNumber}</span>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h4 className="text-sm text-white font-medium truncate">{scene.title}</h4>
+                  <p className="text-[11px] text-stone-500 truncate">{scene.description}</p>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <span className="text-[10px] text-stone-600">{scene.duration}s</span>
+                  <span className="text-[10px] text-stone-600">{scene.cameraAngle}</span>
+                  {scene.status === "completed" && <span className="w-2 h-2 rounded-full bg-emerald-500" />}
+                  <button
+                    onClick={() => {
+                      const filtered = scenes.filter((s) => s.id !== scene.id);
+                      reorderScenes(filtered);
+                    }}
+                    className="text-stone-600 hover:text-red-400 p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                    title="Remove scene"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+          <button
+            onClick={() => {
+              const newScene = {
+                id: `new-${Date.now()}`,
+                sceneNumber: scenes.length + 1,
+                title: `Scene ${scenes.length + 1}`,
+                description: "New scene",
+                cameraAngle: "medium",
+                characters: [],
+                dialog: "",
+                lighting: "natural",
+                duration: 5,
+                status: "pending" as const,
+                prompt: theme.title ? `${theme.tone} ${theme.genre} scene for ${theme.title}` : "New scene",
+                order: scenes.length,
+              };
+              setScenes([...scenes, newScene]);
+            }}
+            className="flex items-center gap-2 text-xs text-stone-500 hover:text-emerald-400 transition-colors"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            Add Scene
+          </button>
+        </div>
+      )}
     </div>
   );
 }

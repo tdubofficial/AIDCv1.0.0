@@ -8,12 +8,21 @@ import type {
   MusicVideoSettings,
   AudioTrack,
   VideoJob,
+  SceneCouncilVotes,
+  AnthologySelections,
+  EquipmentSelections,
+  UIPreferences,
+  CostEntry,
+  RenderTimingRecord,
+  ProjectExport,
 } from "~/app/types";
+
+type TabId = "cast" | "theme" | "council" | "anthologies" | "equipment" | "production" | "compile";
 
 interface AppState {
   // API Keys
-  apiKeys: { gemini: string; fal: string };
-  setApiKey: (provider: "gemini" | "fal", key: string) => void;
+  apiKeys: { gemini: string; fal: string; elevenlabs: string };
+  setApiKey: (provider: "gemini" | "fal" | "elevenlabs", key: string) => void;
 
   // Cast
   characters: Character[];
@@ -35,6 +44,19 @@ interface AppState {
   updateScene: (id: string, updates: Partial<StoryboardScene>) => void;
   reorderScenes: (scenes: StoryboardScene[]) => void;
 
+  // Council Voting
+  councilVotes: SceneCouncilVotes[];
+  setCouncilVotes: (votes: SceneCouncilVotes[]) => void;
+  updateCouncilVote: (sceneId: string, updates: Partial<SceneCouncilVotes>) => void;
+
+  // Anthology Selections (global creative direction)
+  anthologySelections: AnthologySelections;
+  setAnthologySelections: (sel: Partial<AnthologySelections>) => void;
+
+  // Equipment Selections (camera/lens/lighting)
+  equipmentSelections: EquipmentSelections;
+  setEquipmentSelections: (sel: Partial<EquipmentSelections>) => void;
+
   // Music Video
   musicSettings: MusicVideoSettings;
   setMusicSettings: (settings: Partial<MusicVideoSettings>) => void;
@@ -47,10 +69,24 @@ interface AppState {
   updateVideoJob: (id: string, updates: Partial<VideoJob>) => void;
 
   // UI
-  activeTab: "cast" | "theme" | "production" | "compile" | "council" | "anthologies" | "equipment";
-  setActiveTab: (tab: "cast" | "theme" | "production" | "compile" | "council" | "anthologies" | "equipment") => void;
-  selectedProvider: "kling" | "minimax" | "wan" | "auto";
-  setSelectedProvider: (p: "kling" | "minimax" | "wan" | "auto") => void;
+  activeTab: TabId;
+  setActiveTab: (tab: TabId) => void;
+  selectedProvider: "kling" | "kling-o1" | "minimax" | "wan" | "omni-human" | "veo2" | "ltx" | "pixverse" | "runway" | "auto";
+  setSelectedProvider: (p: "kling" | "kling-o1" | "minimax" | "wan" | "omni-human" | "veo2" | "ltx" | "pixverse" | "runway" | "auto") => void;
+
+  // UI Preferences (feature #14)
+  uiPreferences: UIPreferences;
+  setUIPreferences: (prefs: Partial<UIPreferences>) => void;
+
+  // Cost Tracking (feature #13)
+  costLog: CostEntry[];
+  addCostEntry: (entry: CostEntry) => void;
+  clearCostLog: () => void;
+
+  // Render Timing History (adaptive estimation)
+  renderTimings: RenderTimingRecord[];
+  addRenderTiming: (record: RenderTimingRecord) => void;
+  clearRenderTimings: () => void;
 
   // Final
   finalVideoUrl: string | null;
@@ -61,12 +97,12 @@ export const useAppStore = create<AppState>()(
   persist(
     (set) => ({
       // API Keys
-      apiKeys: { gemini: "", fal: "" },
+      apiKeys: { gemini: "", fal: "", elevenlabs: "" },
       setApiKey: (provider, key) =>
         set((s) => ({ apiKeys: { ...s.apiKeys, [provider]: key } })),
 
       // Cast
-      characters: [],
+      characters: [] as Character[],
       addCharacter: (char) =>
         set((s) => ({ characters: [...s.characters, char] })),
       updateCharacter: (id, updates) =>
@@ -96,7 +132,7 @@ export const useAppStore = create<AppState>()(
         set((s) => ({ visualPreset: { ...s.visualPreset, ...preset } })),
 
       // Storyboard
-      scenes: [],
+      scenes: [] as StoryboardScene[],
       setScenes: (scenes) => set({ scenes }),
       updateScene: (id, updates) =>
         set((s) => ({
@@ -113,6 +149,39 @@ export const useAppStore = create<AppState>()(
           })),
         }),
 
+      // Council Voting
+      councilVotes: [] as SceneCouncilVotes[],
+      setCouncilVotes: (votes) => set({ councilVotes: votes }),
+      updateCouncilVote: (sceneId, updates) =>
+        set((s) => ({
+          councilVotes: s.councilVotes.map((cv) =>
+            cv.sceneId === sceneId ? { ...cv, ...updates } : cv
+          ),
+        })),
+
+      // Anthology Selections
+      anthologySelections: {
+        directorStyle: null as string | null,
+        colorGrade: null as string | null,
+        promptHints: [] as string[],
+      },
+      setAnthologySelections: (sel) =>
+        set((s) => ({
+          anthologySelections: { ...s.anthologySelections, ...sel },
+        })),
+
+      // Equipment Selections
+      equipmentSelections: {
+        cameraId: null as string | null,
+        lensId: null as string | null,
+        lightingStyleId: null as string | null,
+        promptHints: [] as string[],
+      },
+      setEquipmentSelections: (sel) =>
+        set((s) => ({
+          equipmentSelections: { ...s.equipmentSelections, ...sel },
+        })),
+
       // Music Video
       musicSettings: {
         isEnabled: false,
@@ -126,11 +195,11 @@ export const useAppStore = create<AppState>()(
         set((s) => ({
           musicSettings: { ...s.musicSettings, ...settings },
         })),
-      audioTrack: null,
+      audioTrack: null as AudioTrack | null,
       setAudioTrack: (track) => set({ audioTrack: track }),
 
       // Video Jobs
-      videoJobs: [],
+      videoJobs: [] as VideoJob[],
       addVideoJob: (job) =>
         set((s) => ({ videoJobs: [...s.videoJobs, job] })),
       updateVideoJob: (id, updates) =>
@@ -146,19 +215,46 @@ export const useAppStore = create<AppState>()(
       selectedProvider: "wan",
       setSelectedProvider: (p) => set({ selectedProvider: p }),
 
+      // UI Preferences
+      uiPreferences: {
+        defaultProvider: "wan",
+        defaultAspectRatio: "16:9",
+        dialogueEnabledByDefault: true,
+        guidedMode: true,
+      },
+      setUIPreferences: (prefs) =>
+        set((s) => ({ uiPreferences: { ...s.uiPreferences, ...prefs } })),
+
+      // Cost Tracking
+      costLog: [] as CostEntry[],
+      addCostEntry: (entry) =>
+        set((s) => ({ costLog: [...s.costLog, entry] })),
+      clearCostLog: () => set({ costLog: [] }),
+
+      // Render Timing History — keep last 100 records
+      renderTimings: [] as RenderTimingRecord[],
+      addRenderTiming: (record) =>
+        set((s) => ({ renderTimings: [...s.renderTimings, record].slice(-100) })),
+      clearRenderTimings: () => set({ renderTimings: [] }),
+
       // Final
-      finalVideoUrl: null,
+      finalVideoUrl: null as string | null,
       setFinalVideoUrl: (url) => set({ finalVideoUrl: url }),
     }),
     {
       name: "ai-director-storage",
-      // Avoid persisting large binary data (data URLs). Persist only audio metadata.
       partialize: (state) => ({
         apiKeys: state.apiKeys,
         characters: state.characters,
         theme: state.theme,
         visualPreset: state.visualPreset,
         scenes: state.scenes,
+        councilVotes: state.councilVotes,
+        anthologySelections: state.anthologySelections,
+        equipmentSelections: state.equipmentSelections,
+        uiPreferences: state.uiPreferences,
+        costLog: state.costLog,
+        renderTimings: state.renderTimings,
         audioTrack: state.audioTrack
           ? {
               id: state.audioTrack.id,
@@ -172,3 +268,50 @@ export const useAppStore = create<AppState>()(
     }
   )
 );
+
+// ============================================================
+// PROJECT EXPORT/IMPORT (standalone functions — feature #10)
+// ============================================================
+
+export function exportProject(): ProjectExport {
+  const s = useAppStore.getState();
+  return {
+    version: "1.0.0",
+    exportDate: new Date().toISOString(),
+    theme: s.theme,
+    characters: s.characters.map((c) => ({ ...c, photoUrl: null })),
+    scenes: s.scenes.map((sc) => ({
+      ...sc,
+      videoUrl: undefined,
+      previousVideoUrl: undefined,
+      thumbnailUrl: undefined,
+    })),
+    visualPreset: s.visualPreset,
+    councilVotes: s.councilVotes,
+    anthologySelections: s.anthologySelections,
+    equipmentSelections: s.equipmentSelections,
+    musicSettings: s.musicSettings,
+    selectedProvider: s.selectedProvider,
+    uiPreferences: s.uiPreferences,
+  };
+}
+
+export function importProject(data: ProjectExport): void {
+  useAppStore.setState({
+    theme: data.theme,
+    characters: data.characters,
+    scenes: data.scenes.map((sc, idx) => ({
+      ...sc,
+      status: sc.videoUrl ? sc.status : ("pending" as const),
+      order: idx,
+      sceneNumber: idx + 1,
+    })),
+    visualPreset: data.visualPreset,
+    councilVotes: data.councilVotes || [],
+    anthologySelections: data.anthologySelections || { directorStyle: null, colorGrade: null, promptHints: [] },
+    equipmentSelections: data.equipmentSelections || { cameraId: null, lensId: null, lightingStyleId: null, promptHints: [] },
+    musicSettings: data.musicSettings,
+    selectedProvider: data.selectedProvider || "wan",
+    uiPreferences: data.uiPreferences || { defaultProvider: "wan", defaultAspectRatio: "16:9", dialogueEnabledByDefault: true, guidedMode: true },
+  });
+}

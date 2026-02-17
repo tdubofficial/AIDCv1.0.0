@@ -219,12 +219,12 @@ export const anthologies: Anthology[] = [
     }))
   ),
   // Lighting
-  ...Object.entries(LIGHTING).flatMap(([category, items]) =>
+  ...(Object.entries(LIGHTING) as [string, readonly { id: string; name: string; desc?: string }[]][]).flatMap(([category, items]) =>
     items.map((item) => ({
       id: item.id,
       title: item.name,
       category: `Lighting - ${category}`,
-      content: 'desc' in item ? item.desc : item.name,
+      content: item.desc ?? item.name,
       tags: [],
     }))
   ),

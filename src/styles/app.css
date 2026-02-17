@@ -19,3 +19,25 @@
     @apply bg-stone-700 rounded-full;
   }
 }
+
+/* Equipment 3D rotate animation */
+@keyframes equipment-rotate {
+  0%   { transform: perspective(200px) rotateY(0deg); }
+  100% { transform: perspective(200px) rotateY(360deg); }
+}
+@keyframes equipment-float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-4px); }
+}
+.equipment-rotate {
+  animation: equipment-rotate 3s linear infinite;
+  transform-style: preserve-3d;
+}
+.equipment-float {
+  animation: equipment-float 2s ease-in-out infinite;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translate(-50%, 4px) scale(0.95); }
+  to   { opacity: 1; transform: translate(-50%, 0) scale(1); }
+}
