@@ -43,18 +43,10 @@
     ],
     "windows": {
       "nsis": {
-        "oneClick": false,
-        "allowElevation": true,
-        "createDesktopShortcut": true,
-        "createStartMenuShortcut": true,
-        "shortcutName": "AI Director's Chair",
         "installMode": "currentUser"
       },
       "wix": {
         "language": "en-US"
-      },
-      "webviewInstallMode": {
-        "type": "downloadBootstrapper"
       }
     },
     "macOS": {
